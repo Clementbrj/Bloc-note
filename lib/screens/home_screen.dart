@@ -1,173 +1,230 @@
-import 'package:flutter/material.dart';
-import 'package:flutter_markdown/flutter_markdown.dart';
-import '../models/note.dart';
-import '../services/supabase_storage_service.dart';
+import 'dart:io';
 
-// Écran pour créer ou modifier une note
-class EditNoteScreen extends StatefulWidget {
-  final Note? note;
-  const EditNoteScreen({super.key, this.note});
+import 'package:flutter/material.dart';
+import 'package:path_provider/path_provider.dart';
+import 'package:share_plus/share_plus.dart';
+import 'package:pdf/widgets.dart' as pw;
+import 'package:pdf/pdf.dart';
+import '../models/note.dart';
+import '../services/storage_services.dart';
+import '../services/supabase_storage_service.dart';
+import 'edit_note.dart';
+import 'package:supabase_flutter/supabase_flutter.dart';
+
+class HomeScreen extends StatefulWidget {
+  const HomeScreen({super.key});
 
   @override
-  State<EditNoteScreen> createState() => _EditNoteScreenState();
+  State<HomeScreen> createState() => _HomeScreenState();
 }
 
-class _EditNoteScreenState extends State<EditNoteScreen> {
-  final SupabaseStorageService storage = SupabaseStorageService();
-  final _formKey = GlobalKey<FormState>();
+class _HomeScreenState extends State<HomeScreen> {
+  final storage = SupabaseStorageService();
+  final supabase = Supabase.instance.client;
+  late Future<List<Note>> notesFuture;
+  User? user;
 
-  late TextEditingController _titleController;
-  late TextEditingController _contentController;
-  late String _selectedCategory;
-  bool _isPreview = false;
+  static const List<String> categoriesFilter = [
+    'All',
+    'Low',
+    'Medium',
+    'High',
+    'Very High',
+    'Hard',
+    'New Age',
+  ];
 
-  final List<String> _categories = Note.allowedCategories;
+  String _selectedCategory = 'All';
 
   @override
   void initState() {
     super.initState();
-    // Initialisation des contrôleurs et catégorie sélectionnée
-    _titleController = TextEditingController(text: widget.note?.title ?? '');
-    _contentController = TextEditingController(text: widget.note?.content ?? '');
-    _selectedCategory = (widget.note != null && _categories.contains(widget.note!.category))
-        ? widget.note!.category
-        : _categories.first;
+    user = supabase.auth.currentUser;
+    _loadNotes();
   }
 
-  @override
-  void dispose() {
-    // Libération des ressources des contrôleurs
-    _titleController.dispose();
-    _contentController.dispose();
-    super.dispose();
+  void _loadNotes() {
+    notesFuture = (_selectedCategory == 'All')
+        ? storage.getAllNotes()
+        : storage.getAllNotes(category: _selectedCategory);
   }
 
-  // Sauvegarde ou mise à jour de la note
-  Future<void> _saveNote() async {
-    if (!_formKey.currentState!.validate()) return;
+  void refreshNotes() => setState(_loadNotes);
 
-    final title = _titleController.text.trim();
-    final content = _contentController.text.trim();
-    final now = DateTime.now();
+  String _formatDate(DateTime date) =>
+      '${date.day.toString().padLeft(2, '0')}/${date.month.toString().padLeft(2, '0')}/${date.year}';
 
-    final note = widget.note == null
-        ? Note(title: title, content: content, createdAt: now, category: _selectedCategory)
-        : Note(id: widget.note!.id, title: title, content: content, createdAt: widget.note!.createdAt, category: _selectedCategory);
+  Future<void> shareNoteText(Note note) async {
+    final content = '''
+Titre : ${note.title}
+Catégorie : ${note.category}
+Date : ${_formatDate(note.createdAt)}
 
-    if (widget.note == null) {
-      await storage.addNote(note);
-    } else {
-      await storage.updateNote(note);
+${note.content}
+''';
+    await Share.share(content, subject: note.title);
+  }
+
+  Future<void> downloadNote(Note note) async {
+    try {
+      final pdf = pw.Document();
+
+      pdf.addPage(
+        pw.Page(
+          build: (context) => pw.Column(
+            crossAxisAlignment: pw.CrossAxisAlignment.start,
+            children: [
+              pw.Text('Titre : ${note.title}', style: pw.TextStyle(fontSize: 18, fontWeight: pw.FontWeight.bold)),
+              pw.SizedBox(height: 8),
+              pw.Text('Catégorie : ${note.category}', style: pw.TextStyle(fontSize: 14, color: PdfColors.grey700)),
+              pw.Text('Date : ${_formatDate(note.createdAt)}', style: pw.TextStyle(fontSize: 14, color: PdfColors.grey700)),
+              pw.Divider(),
+              pw.SizedBox(height: 10),
+              pw.Text(note.content, style: pw.TextStyle(fontSize: 12)),
+            ],
+          ),
+        ),
+      );
+
+      final dir = await getApplicationDocumentsDirectory();
+      final safeFileName = note.title.replaceAll(RegExp(r'[<>:"/\\|?*]'), '_');
+      final filePath = '${dir.path}/$safeFileName.pdf';
+      final file = File(filePath);
+
+      await file.writeAsBytes(await pdf.save());
+
+      ScaffoldMessenger.of(context).showSnackBar(SnackBar(content: Text('Note téléchargée :\n$filePath')));
+    } catch (e) {
+      ScaffoldMessenger.of(context).showSnackBar(SnackBar(content: Text('Erreur lors du téléchargement : $e')));
     }
-
-    Navigator.of(context).pop(true);
   }
 
-  // Suppression de la note avec confirmation
-  Future<void> _deleteNote() async {
-    if (widget.note == null) return;
+  Future<void> _handleAuthAction() async {
+    if (user != null) {
+      await supabase.auth.signOut();
+      setState(() => user = null);
+    }
+    Navigator.of(context).pushReplacementNamed('/login');
+  }
 
-    final confirm = await showDialog<bool>(
-      context: context,
-      builder: (context) => AlertDialog(
-        title: const Text('Supprimer la note ?'),
-        content: const Text('Cette action est irréversible.'),
-        actions: [
-          TextButton(onPressed: () => Navigator.pop(context, false), child: const Text('Annuler')),
-          TextButton(onPressed: () => Navigator.pop(context, true), child: const Text('Supprimer')),
-        ],
+  Widget _buildDropdown() {
+    return Padding(
+      padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 8),
+      child: DropdownButton<String>(
+        isExpanded: true,
+        value: _selectedCategory,
+        items: categoriesFilter.map((cat) => DropdownMenuItem(value: cat, child: Text(cat))).toList(),
+        onChanged: (value) {
+          if (value == null) return;
+          setState(() {
+            _selectedCategory = value;
+            refreshNotes();
+          });
+        },
       ),
     );
-
-    if (confirm == true) {
-      await storage.deleteNote(widget.note!.id!);
-      Navigator.of(context).pop(true);
-    }
   }
 
-  // Champ de saisie du titre
-  Widget _buildTitleField() {
-    return TextFormField(
-      controller: _titleController,
-      decoration: const InputDecoration(labelText: 'Titre'),
-      validator: (val) => val == null || val.isEmpty ? 'Le titre est requis' : null,
-    );
-  }
-
-  // Sélecteur de catégorie
-  Widget _buildCategoryDropdown() {
-    return DropdownButtonFormField<String>(
-      value: _selectedCategory,
-      items: _categories.map((cat) => DropdownMenuItem(value: cat, child: Text(cat))).toList(),
-      onChanged: (val) {
-        if (val != null) setState(() => _selectedCategory = val);
-      },
-      decoration: const InputDecoration(labelText: 'Catégorie'),
-    );
-  }
-
-  // Éditeur de contenu ou aperçu Markdown
-  Widget _buildContentEditor() {
-    return _isPreview
-        ? Markdown(data: _contentController.text, selectable: true)
-        : TextFormField(
-            controller: _contentController,
-            decoration: const InputDecoration(labelText: 'Contenu'),
-            maxLines: null,
-            expands: true,
-            keyboardType: TextInputType.multiline,
-            validator: (val) => val == null || val.isEmpty ? 'Le contenu est requis' : null,
+  Widget _buildNoteCard(Note note) {
+    return Card(
+      margin: const EdgeInsets.symmetric(horizontal: 12, vertical: 8),
+      child: ListTile(
+        title: Text(note.title),
+        subtitle: Column(
+          crossAxisAlignment: CrossAxisAlignment.start,
+          children: [
+            Text(
+              note.content.length > 50 ? '${note.content.substring(0, 50)}...' : note.content,
+            ),
+            Text(
+              'Catégorie : ${note.category}',
+              style: const TextStyle(fontSize: 12, color: Colors.blueGrey),
+            ),
+          ],
+        ),
+        trailing: SizedBox(
+          width: 120,
+          child: Column(
+            mainAxisAlignment: MainAxisAlignment.center,
+            crossAxisAlignment: CrossAxisAlignment.end,
+            children: [
+              Text(
+                _formatDate(note.createdAt),
+                style: const TextStyle(fontSize: 12, color: Colors.grey),
+              ),
+              const SizedBox(height: 4),
+              Wrap(
+                spacing: 4,
+                children: [
+                  IconButton(
+                    icon: const Icon(Icons.share),
+                    tooltip: 'Partager la note',
+                    onPressed: () => shareNoteText(note),
+                    constraints: const BoxConstraints(),
+                    padding: EdgeInsets.zero,
+                  ),
+                  IconButton(
+                    icon: const Icon(Icons.download),
+                    tooltip: 'Télécharger la note',
+                    onPressed: () => downloadNote(note),
+                    constraints: const BoxConstraints(),
+                    padding: EdgeInsets.zero,
+                  ),
+                ],
+              ),
+            ],
+          ),
+        ),
+        onTap: () async {
+          final noteWasUpdated = await Navigator.of(context).push(
+            MaterialPageRoute(builder: (_) => EditNoteScreen(note: note)),
           );
-  }
-
-  // Bouton de sauvegarde
-  Widget _buildSaveButton() {
-    return ElevatedButton(
-      onPressed: _saveNote,
-      child: const Text('Sauvegarder'),
+          if (noteWasUpdated == true) refreshNotes();
+        },
+      ),
     );
   }
 
   @override
   Widget build(BuildContext context) {
-    final isEditing = widget.note != null;
-
     return Scaffold(
       appBar: AppBar(
-        title: Text(isEditing ? 'Modifier la note' : 'Nouvelle note'),
+        title: const Text('Mes notes'),
         actions: [
           IconButton(
-            icon: Icon(_isPreview ? Icons.edit : Icons.preview),
-            tooltip: _isPreview ? 'Modifier' : 'Aperçu Markdown',
-            onPressed: () => setState(() => _isPreview = !_isPreview),
+            icon: Icon(user != null ? Icons.logout : Icons.login),
+            tooltip: user != null ? 'Se déconnecter' : 'Se connecter',
+            onPressed: _handleAuthAction,
           ),
-          if (isEditing)
-            IconButton(
-              icon: const Icon(Icons.delete),
-              tooltip: 'Supprimer la note',
-              onPressed: _deleteNote,
-            ),
         ],
-      ),
-      body: Padding(
-        padding: const EdgeInsets.all(16),
-        child: Form(
-          key: _formKey,
-          child: Column(
-            children: [
-              _buildTitleField(),
-              const SizedBox(height: 16),
-              _buildCategoryDropdown(),
-              const SizedBox(height: 16),
-              Expanded(child: _buildContentEditor()),
-              const SizedBox(height: 16),
-              Row(
-                mainAxisAlignment: MainAxisAlignment.spaceEvenly,
-                children: [_buildSaveButton()],
-              ),
-            ],
-          ),
+        bottom: PreferredSize(
+          preferredSize: const Size.fromHeight(48.0),
+          child: _buildDropdown(),
         ),
+      ),
+      body: FutureBuilder<List<Note>>(
+        future: notesFuture,
+        builder: (context, snapshot) {
+          if (snapshot.connectionState == ConnectionState.waiting) {
+            return const Center(child: CircularProgressIndicator());
+          } else if (snapshot.hasError) {
+            return Center(child: Text('Erreur: ${snapshot.error}'));
+          } else if (!snapshot.hasData || snapshot.data!.isEmpty) {
+            return const Center(child: Text('Aucune note pour le moment.'));
+          }
+
+          return ListView.builder(
+            itemCount: snapshot.data!.length,
+            itemBuilder: (context, index) => _buildNoteCard(snapshot.data![index]),
+          );
+        },
+      ),
+      floatingActionButton: FloatingActionButton(
+        onPressed: () async {
+          await Navigator.of(context).push(MaterialPageRoute(builder: (_) => const EditNoteScreen()));
+          refreshNotes();
+        },
+        child: const Icon(Icons.add),
       ),
     );
   }
