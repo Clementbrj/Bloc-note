@@ -1,7 +1,7 @@
 import 'package:flutter/material.dart';
 import '../models/note.dart';
 import '../services/storage_services.dart';
-
+import '../services/supabase_storage_service.dart'; 
 class EditNoteScreen extends StatefulWidget {
   final Note? note;
   const EditNoteScreen({super.key, this.note});
@@ -11,7 +11,7 @@ class EditNoteScreen extends StatefulWidget {
 }
 
 class _EditNoteScreenState extends State<EditNoteScreen> {
-  final StorageService storage = StorageService();
+final SupabaseStorageService storage = SupabaseStorageService();
   final _formKey = GlobalKey<FormState>();
 
   late TextEditingController _titleController;
@@ -51,7 +51,7 @@ class _EditNoteScreenState extends State<EditNoteScreen> {
             );
 
     if (widget.note == null) {
-      await storage.insertNote(note);
+      await storage.addNote(note);
     } else {
       await storage.updateNote(note);
     }

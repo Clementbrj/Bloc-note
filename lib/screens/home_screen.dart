@@ -3,6 +3,8 @@ import '../models/note.dart';
 import '../services/storage_services.dart';
 import 'edit_note.dart';
 import 'note_detail.dart'; // ✅ Import ajouté
+import '../services/supabase_storage_service.dart'; 
+import 'package:supabase_flutter/supabase_flutter.dart';
 
 class HomeScreen extends StatefulWidget {
   const HomeScreen({super.key});
@@ -12,13 +14,16 @@ class HomeScreen extends StatefulWidget {
 }
 
 class _HomeScreenState extends State<HomeScreen> {
-  final StorageService storage = StorageService();
+final storage = SupabaseStorageService();
+ final supabase = Supabase.instance.client; 
   late Future<List<Note>> notesFuture;
+    User? user;
 
   @override
   void initState() {
     super.initState();
     notesFuture = storage.getAllNotes();
+        user = supabase.auth.currentUser;
   }
 
   void refreshNotes() {
@@ -29,8 +34,29 @@ class _HomeScreenState extends State<HomeScreen> {
 
   @override
   Widget build(BuildContext context) {
+    
     return Scaffold(
-      appBar: AppBar(title: const Text('Mes notes')),
+      
+      appBar: AppBar(
+  title: const Text('Mes notes'),
+  actions: [
+ IconButton(
+            icon: Icon(user != null ? Icons.logout : Icons.login),
+            tooltip: user != null ? 'Se déconnecter' : 'Se connecter',
+            onPressed: () async {
+              if (user != null) {
+                await supabase.auth.signOut();
+                setState(() {
+                  user = null;
+                });
+                Navigator.of(context).pushReplacementNamed('/login');
+              } else {
+                Navigator.of(context).pushReplacementNamed('/login');
+              }
+            },
+          ),
+  ],
+),
       body: FutureBuilder<List<Note>>(
         future: notesFuture,
         builder: (context, snapshot) {
@@ -59,18 +85,19 @@ class _HomeScreenState extends State<HomeScreen> {
                   '${note.createdAt.day}/${note.createdAt.month}/${note.createdAt.year}',
                   style: const TextStyle(fontSize: 12, color: Colors.grey),
                 ),
+                
                 onTap: () async {
                   final noteWasDeleted = await Navigator.of(context).push(
                     MaterialPageRoute(
                       builder:
                           (_) => NoteDetailScreen(
                             note: note,
-                          ), // ✅ Aller vers NoteDetail
+                          ), 
                     ),
                   );
 
                   if (noteWasDeleted == true) {
-                    refreshNotes(); // ✅ Rafraîchir la liste si la note a été supprimée
+                    refreshNotes(); 
                   }
                 },
               );

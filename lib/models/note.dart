@@ -1,5 +1,5 @@
 class Note {
-  final int? id;
+  final String? id;
   final String title;
   final String content;
   final DateTime createdAt;
@@ -19,9 +19,9 @@ class Note {
   };
 
   factory Note.fromMap(Map<String, dynamic> map) => Note(
-    id: map['id'],
-    title: map['title'],
-    content: map['content'],
-    createdAt: DateTime.parse(map['createdAt']),
+      id: map['id'] as String?,
+      title: map['title'] as String,
+      content: map['content'] as String,
+      createdAt: DateTime.parse(map['created_at'] as String),
   );
 }

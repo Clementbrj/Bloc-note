@@ -1,10 +1,10 @@
 import 'package:flutter/material.dart';
 import '../models/note.dart';
 import '../services/storage_services.dart';
-
+import '../services/supabase_storage_service.dart'; 
 class NoteDetailScreen extends StatelessWidget {
   final Note note;
-  final StorageService storage = StorageService();
+  final SupabaseStorageService storage = SupabaseStorageService();
 
   NoteDetailScreen({super.key, required this.note});
 
