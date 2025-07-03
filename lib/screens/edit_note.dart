@@ -3,8 +3,9 @@ import 'package:flutter_markdown/flutter_markdown.dart';
 import '../models/note.dart';
 import '../services/storage_services.dart';
 
+// Créer / modifier une note
 class EditNoteScreen extends StatefulWidget {
-  final Note? note;
+  final Note? note; // Créer / modifier si existante
   const EditNoteScreen({super.key, this.note});
 
   @override
@@ -12,24 +13,24 @@ class EditNoteScreen extends StatefulWidget {
 }
 
 class _EditNoteScreenState extends State<EditNoteScreen> {
-  final StorageService storage = StorageService();
+  final StorageService storage = StorageService(); // Service sauvegarde/lecture
   final _formKey = GlobalKey<FormState>();
 
   late TextEditingController _titleController;
   late TextEditingController _contentController;
   String? _selectedCategory;
-  bool _isPreview = false;
+  bool _isPreview = false; // Mode .md
 
   final List<String> _categories = Note.allowedCategories;
 
   @override
   void initState() {
     super.initState();
+    // Pré-remplit si existante
     _titleController = TextEditingController(text: widget.note?.title ?? '');
     _contentController = TextEditingController(
       text: widget.note?.content ?? '',
     );
-
     _selectedCategory =
         (widget.note != null &&
                 Note.allowedCategories.contains(widget.note!.category))
@@ -44,6 +45,7 @@ class _EditNoteScreenState extends State<EditNoteScreen> {
     super.dispose();
   }
 
+  // Save la note
   Future<void> _saveNote() async {
     if (!_formKey.currentState!.validate()) return;
 
@@ -52,6 +54,7 @@ class _EditNoteScreenState extends State<EditNoteScreen> {
     final category = _selectedCategory ?? Note.allowedCategories.first;
     final now = DateTime.now();
 
+    // crée note ou MAJ existante
     final note =
         (widget.note == null)
             ? Note(
@@ -69,14 +72,15 @@ class _EditNoteScreenState extends State<EditNoteScreen> {
             );
 
     if (widget.note == null) {
-      await storage.insertNote(note);
+      await storage.insertNote(note); // Create
     } else {
-      await storage.updateNote(note);
+      await storage.updateNote(note); // Update
     }
 
-    Navigator.of(context).pop(true);
+    Navigator.of(context).pop(true); // Notif note créer
   }
 
+  // supprimer note
   Future<void> _deleteNote() async {
     if (widget.note == null) return;
 
@@ -88,11 +92,12 @@ class _EditNoteScreenState extends State<EditNoteScreen> {
             content: const Text('Cette action est irréversible.'),
             actions: [
               TextButton(
-                onPressed: () => Navigator.pop(context, false),
+                onPressed: () => Navigator.pop(context, false), // Annuler
                 child: const Text('Annuler'),
               ),
               TextButton(
-                onPressed: () => Navigator.pop(context, true),
+                onPressed:
+                    () => Navigator.pop(context, true), // Confirmer suppression
                 child: const Text('Supprimer'),
               ),
             ],
@@ -100,8 +105,8 @@ class _EditNoteScreenState extends State<EditNoteScreen> {
     );
 
     if (confirm == true) {
-      await storage.deleteNote(widget.note!.id!);
-      Navigator.of(context).pop(true);
+      await storage.deleteNote(widget.note!.id!); // Supprime dans la base
+      Navigator.of(context).pop(true); // Ferme l’écran
     }
   }
 
@@ -113,11 +118,13 @@ class _EditNoteScreenState extends State<EditNoteScreen> {
       appBar: AppBar(
         title: Text(isEditing ? 'Modifier la note' : 'Nouvelle note'),
         actions: [
+          // aperçu markdown
           IconButton(
             icon: Icon(_isPreview ? Icons.edit : Icons.preview),
             tooltip: _isPreview ? 'Modifier' : 'Aperçu Markdown',
             onPressed: () => setState(() => _isPreview = !_isPreview),
           ),
+          // supprimer si edit
           if (isEditing)
             IconButton(
               icon: const Icon(Icons.delete),
@@ -132,6 +139,7 @@ class _EditNoteScreenState extends State<EditNoteScreen> {
           key: _formKey,
           child: Column(
             children: [
+              // Champ titre
               TextFormField(
                 controller: _titleController,
                 decoration: const InputDecoration(labelText: 'Titre'),
@@ -142,6 +150,8 @@ class _EditNoteScreenState extends State<EditNoteScreen> {
                             : null,
               ),
               const SizedBox(height: 16),
+
+              // Choix de la cat
               DropdownButtonFormField<String>(
                 value: _selectedCategory,
                 items:
@@ -155,6 +165,8 @@ class _EditNoteScreenState extends State<EditNoteScreen> {
                 decoration: const InputDecoration(labelText: 'Catégorie'),
               ),
               const SizedBox(height: 16),
+
+              // Champ contenu / aperçu markdown
               Expanded(
                 child:
                     _isPreview
@@ -178,6 +190,8 @@ class _EditNoteScreenState extends State<EditNoteScreen> {
                         ),
               ),
               const SizedBox(height: 16),
+
+              // Bouton save
               Row(
                 mainAxisAlignment: MainAxisAlignment.spaceEvenly,
                 children: [
@@ -185,7 +199,6 @@ class _EditNoteScreenState extends State<EditNoteScreen> {
                     onPressed: _saveNote,
                     child: const Text('Sauvegarder'),
                   ),
-                  // Bouton Export supprimé d'ici
                 ],
               ),
             ],
