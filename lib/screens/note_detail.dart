@@ -1,23 +1,27 @@
 import 'package:flutter/material.dart';
 import 'package:flutter_markdown/flutter_markdown.dart';
 import '../models/note.dart';
-import '../services/storage_services.dart';
-import '../services/supabase_storage_service.dart'; 
+import '../services/supabase_storage_service.dart';
 
 class NoteDetailScreen extends StatelessWidget {
   final Note note;
   final SupabaseStorageService storage = SupabaseStorageService();
 
-  const NoteDetailScreen({super.key, required this.note});
+  NoteDetailScreen({super.key, required this.note});
 
   @override
   Widget build(BuildContext context) {
     return Scaffold(
-      appBar: AppBar(title: Text(note.title)), // Affiche le titre de la note dans la barre d'app
+      appBar: AppBar(
+        title: Text(note.title),
+      ), // Affiche le titre de la note dans la barre d'app
       body: Padding(
-        padding: const EdgeInsets.all(16),  // Ajoute un padding autour du contenu
+        padding: const EdgeInsets.all(
+          16,
+        ), // Ajoute un padding autour du contenu
         child: Column(
-          crossAxisAlignment: CrossAxisAlignment.start, // Aligne le contenu à gauche
+          crossAxisAlignment:
+              CrossAxisAlignment.start, // Aligne le contenu à gauche
           children: [
             Text(
               'Catégorie: ${note.category}',
