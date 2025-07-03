@@ -43,7 +43,7 @@ class StorageService {
         id INTEGER PRIMARY KEY AUTOINCREMENT, 
         title TEXT NOT NULL,                   
         content TEXT NOT NULL,                 
-        createdAt TEXT NOT NULL,               
+        createdAt TIMESTAMP NOT NULL,               
         category TEXT                         
       )
     ''');
