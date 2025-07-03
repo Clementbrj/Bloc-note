@@ -1,56 +1,34 @@
 import 'package:flutter/material.dart';
+import 'package:flutter_markdown/flutter_markdown.dart';
 import '../models/note.dart';
-import '../services/storage_services.dart';
 
 class NoteDetailScreen extends StatelessWidget {
   final Note note;
-  final StorageService storage = StorageService();
 
-  NoteDetailScreen({super.key, required this.note});
-
-  Future<void> _deleteNote(BuildContext context) async {
-    final confirm = await showDialog<bool>(
-      context: context,
-      builder:
-          (_) => AlertDialog(
-            title: const Text('Confirmer la suppression'),
-            content: const Text('Voulez-vous vraiment supprimer cette note ?'),
-            actions: [
-              TextButton(
-                onPressed: () => Navigator.of(context).pop(false),
-                child: const Text('Annuler'),
-              ),
-              TextButton(
-                onPressed: () => Navigator.of(context).pop(true),
-                child: const Text('Supprimer'),
-              ),
-            ],
-          ),
-    );
-
-    if (confirm == true) {
-      await storage.deleteNote(note.id!);
-      Navigator.of(context).pop(true);
-    }
-  }
+  const NoteDetailScreen({super.key, required this.note});
 
   @override
   Widget build(BuildContext context) {
     return Scaffold(
-      appBar: AppBar(
-        title: const Text('Détails de la note'),
-        actions: [
-          IconButton(
-            icon: const Icon(Icons.close, color: Colors.red), // ← un X rouge
-            tooltip: 'Supprimer la note',
-            onPressed: () => _deleteNote(context),
-          ),
-        ],
-      ),
-
+      appBar: AppBar(title: Text(note.title)),
       body: Padding(
-        padding: const EdgeInsets.all(16.0),
-        child: Text(note.content),
+        padding: const EdgeInsets.all(16),
+        child: Column(
+          crossAxisAlignment: CrossAxisAlignment.start,
+          children: [
+            Text(
+              'Catégorie: ${note.category}',
+              style: const TextStyle(fontWeight: FontWeight.bold, fontSize: 16),
+            ),
+            const SizedBox(height: 8),
+            Text(
+              'Créé le : ${note.createdAt.toLocal().toString().split(' ')[0]}',
+              style: const TextStyle(color: Colors.grey),
+            ),
+            const SizedBox(height: 16),
+            Expanded(child: Markdown(data: note.content, selectable: true)),
+          ],
+        ),
       ),
     );
   }
