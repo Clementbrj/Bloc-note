@@ -1,0 +1,13 @@
+﻿<?xml version="1.0" encoding="utf-8"?>
+<Project ToolsVersion="16.0" xmlns="http://schemas.microsoft.com/developer/msbuild/2003">
+  <ItemGroup>
+    <CustomBuild Include="C:\Users\jlaro\OneDrive\Documents\Formation\Ynov\Cours\Cours Desktop\Flutter\Projet-Prise-note\Bloc-note\build\windows\x64\CMakeFiles\a810f956b50bcf6f2b75c12a6c5b3c75\INSTALL_force.rule">
+      <Filter>CMake Rules</Filter>
+    </CustomBuild>
+  </ItemGroup>
+  <ItemGroup>
+    <Filter Include="CMake Rules">
+      <UniqueIdentifier>{2E66457C-0F59-36E6-A84E-39C6927C54E1}</UniqueIdentifier>
+    </Filter>
+  </ItemGroup>
+</Project>
