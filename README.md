@@ -57,6 +57,39 @@ lib/
 
 ---
 
+## Exécutable de l'application
+
+- Rendez-vous dans le dossier build\windows\x64\runner\Release 
+- Lancer l'application : NoteTaking 
+- Profitez !
+- L'installateur  "Inno_setup" est     disponible dans le dossier : "installers"
+
+## Création de l'installeur Windows (Inno Setup)
+
+L’application Flutter Windows peut être distribuée via un exécutable `.exe` généré avec **Inno Setup**, permettant une installation simple sur n’importe quel poste Windows.
+
+### Étapes
+
+1. **Installer Inno Setup** :  
+   https://jrsoftware.org/isinfo.php
+
+2. **Créer le script `installer.iss`** :
+   Exemple minimal :
+
+   ```pascal
+   [Setup]
+   AppName=NotesApp
+   AppVersion=1.0
+   DefaultDirName={pf}\NotesApp
+   DefaultGroupName=NotesApp
+   OutputBaseFilename=NotesAppSetup
+
+   [Files]
+   Source: "build\windows\x64\runner\Release\*"; DestDir: "{app}"; Flags: recursesubdirs
+
+   [Icons]
+   Name: "{group}\NotesApp"; Filename: "{app}\NoteTaking.exe"
+
 ## Test rapide
 
 - Crée une note depuis l'accueil.
