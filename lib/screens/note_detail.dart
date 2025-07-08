@@ -8,7 +8,7 @@ class NoteDetailScreen extends StatelessWidget {
   final Note note;
   final SupabaseStorageService storage = SupabaseStorageService();
 
-  const NoteDetailScreen({super.key, required this.note});
+  NoteDetailScreen({super.key, required this.note});
 
   @override
   Widget build(BuildContext context) {
