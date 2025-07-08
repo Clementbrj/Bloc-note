@@ -1,0 +1,10 @@
+^C:\USERS\JLARO\ONEDRIVE\DOCUMENTS\FORMATION\YNOV\COURS\COURS DESKTOP\FLUTTER\PROJET-PRISE-NOTE\BLOC-NOTE\BUILD\WINDOWS\X64\CMAKEFILES\F37F83D4465C01BC0AB4B689203BEEBF\INSTALL_FORCE.RULE
+setlocal
+cd .
+if %errorlevel% neq 0 goto :cmEnd
+:cmEnd
+endlocal & call :cmErrorLevel %errorlevel% & goto :cmDone
+:cmErrorLevel
+exit /b %1
+:cmDone
+if %errorlevel% neq 0 goto :VCEnd
